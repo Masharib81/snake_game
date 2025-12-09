@@ -481,6 +481,64 @@
             box-shadow: 0 4px 15px rgba(107, 114, 128, 0.4);
         }
 
+        /* Difficulty selector */
+        .difficulty-selector {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .difficulty-label {
+            color: #b8b8d1;
+            font-size: 1em;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .difficulty-options {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .difficulty-btn {
+            font-family: 'Orbitron', sans-serif;
+            padding: 10px 24px;
+            font-size: 0.9em;
+            font-weight: 600;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.05);
+            color: #b8b8d1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .difficulty-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(102, 126, 234, 0.6);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .difficulty-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .difficulty-btn.easy.active {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            box-shadow: 0 4px 15px rgba(74, 222, 128, 0.4);
+        }
+
+        .difficulty-btn.hard.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+
         @media (max-width: 480px) {
             .game-container {
                 padding: 15px;
@@ -554,6 +612,16 @@
                 <div class="d-pad-btn left" id="btnLeft">←</div>
                 <div class="d-pad-btn right" id="btnRight">→</div>
                 <div class="d-pad-center"></div>
+            </div>
+        </div>
+
+        <!-- Difficulty Selector -->
+        <div class="difficulty-selector">
+            <div class="difficulty-label">Select Difficulty</div>
+            <div class="difficulty-options">
+                <button class="difficulty-btn easy" onclick="setDifficulty('easy')">🐢 Easy</button>
+                <button class="difficulty-btn medium active" onclick="setDifficulty('medium')">🚶 Medium</button>
+                <button class="difficulty-btn hard" onclick="setDifficulty('hard')">🚀 Hard</button>
             </div>
         </div>
 
@@ -729,10 +797,40 @@
         let score = 0;
         let level = 1;
         let gameSpeed = 100;
+        let baseGameSpeed = 100; // Base speed for medium difficulty
+        let difficulty = localStorage.getItem('snakeDifficulty') || 'medium';
         let highScore = localStorage.getItem('snakeHighScore') || 0;
         let gameLoop;
         let isGameRunning = false;
         let isPaused = false;
+
+        // Difficulty settings
+        const difficultySettings = {
+            easy: { speed: 150, label: 'Easy' },
+            medium: { speed: 100, label: 'Medium' },
+            hard: { speed: 60, label: 'Hard' }
+        };
+
+        // Set difficulty function
+        function setDifficulty(level) {
+            difficulty = level;
+            baseGameSpeed = difficultySettings[level].speed;
+            localStorage.setItem('snakeDifficulty', level);
+
+            // Update button states
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.difficulty-btn.${level}`).classList.add('active');
+
+            // If game is running, restart with new difficulty
+            if (isGameRunning) {
+                restartGame();
+            }
+        }
+
+        // Apply saved difficulty on load
+        setDifficulty(difficulty);
 
         document.getElementById('highScore').textContent = highScore;
 
@@ -857,8 +955,9 @@
         }
 
         function updateGameSpeed() {
-            // Increase speed by 10% each level, minimum 50ms
-            gameSpeed = Math.max(50, 100 - (level - 1) * 10);
+            // Increase speed by 10% each level, with a minimum based on difficulty
+            const minSpeed = difficulty === 'easy' ? 80 : (difficulty === 'hard' ? 30 : 50);
+            gameSpeed = Math.max(minSpeed, baseGameSpeed - (level - 1) * 10);
         }
 
         function addObstacles() {
@@ -1065,7 +1164,7 @@
             dy = 0;
             score = 0;
             level = 1;
-            gameSpeed = 100;
+            gameSpeed = baseGameSpeed; // Use difficulty base speed
             isGameRunning = true;
             isPaused = false;
             document.getElementById('score').textContent = score;
