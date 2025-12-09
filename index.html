@@ -450,6 +450,37 @@
             }
         }
 
+        /* Music toggle button */
+        .music-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .music-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .music-toggle.muted {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            box-shadow: 0 4px 15px rgba(107, 114, 128, 0.4);
+        }
+
         @media (max-width: 480px) {
             .game-container {
                 padding: 15px;
@@ -465,11 +496,24 @@
                 width: 100%;
                 margin: 0;
             }
+
+            .music-toggle {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2em;
+                top: 15px;
+                right: 15px;
+            }
         }
     </style>
 </head>
 
 <body>
+    <!-- Music toggle button -->
+    <button class="music-toggle" id="musicToggle" onclick="toggleMusic()" title="Toggle Music">
+        🎵
+    </button>
+
     <div class="background-animation" id="particles"></div>
 
     <div class="game-container">
@@ -537,6 +581,17 @@
         // Sound effects using Web Audio API
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
+        // Background music variables
+        let musicInterval = null;
+        let isMusicPlaying = false;
+        let isMusicMuted = localStorage.getItem('snakeMusicMuted') === 'true';
+
+        // Update music button state on load
+        if (isMusicMuted) {
+            document.getElementById('musicToggle').classList.add('muted');
+            document.getElementById('musicToggle').textContent = '🔇';
+        }
+
         function playEatSound() {
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
@@ -588,6 +643,65 @@
 
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        // Background music using a simple melody
+        function playBackgroundMusic() {
+            if (isMusicMuted || !isGameRunning) return;
+
+            // Simple melody pattern (frequencies in Hz)
+            const melody = [523.25, 587.33, 659.25, 698.46, 783.99, 698.46, 659.25, 587.33];
+            let noteIndex = 0;
+
+            function playNote() {
+                if (!isGameRunning || isMusicMuted) return;
+
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = melody[noteIndex];
+                oscillator.type = 'triangle';
+
+                gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+
+                noteIndex = (noteIndex + 1) % melody.length;
+            }
+
+            playNote(); // Play first note immediately
+            musicInterval = setInterval(playNote, 350); // Continue playing notes
+        }
+
+        function stopBackgroundMusic() {
+            if (musicInterval) {
+                clearInterval(musicInterval);
+                musicInterval = null;
+            }
+        }
+
+        function toggleMusic() {
+            isMusicMuted = !isMusicMuted;
+            localStorage.setItem('snakeMusicMuted', isMusicMuted);
+
+            const musicBtn = document.getElementById('musicToggle');
+
+            if (isMusicMuted) {
+                musicBtn.classList.add('muted');
+                musicBtn.textContent = '🔇';
+                stopBackgroundMusic();
+            } else {
+                musicBtn.classList.remove('muted');
+                musicBtn.textContent = '🎵';
+                if (isGameRunning) {
+                    playBackgroundMusic();
+                }
+            }
         }
 
         // Create animated background particles
@@ -960,6 +1074,7 @@
             document.getElementById('startBtn').textContent = 'Restart';
 
             playGameStartSound(); // Play sound when game starts
+            playBackgroundMusic(); // Start background music
             generateFood();
             gameLoop = setInterval(update, gameSpeed);
         }
@@ -968,12 +1083,19 @@
         function pauseGame() {
             if (!isGameRunning) return;
             isPaused = !isPaused;
+
+            if (isPaused) {
+                stopBackgroundMusic();
+            } else {
+                playBackgroundMusic();
+            }
         }
 
         // Game over
         function gameOver() {
             isGameRunning = false;
             clearInterval(gameLoop);
+            stopBackgroundMusic(); // Stop background music
             playGameOverSound(); // Play sound when game is over
             document.getElementById('finalScore').textContent = score;
             document.getElementById('finalLevel').textContent = level;
@@ -1052,3 +1174,4 @@
 </body>
 
 </html>
+
