@@ -315,6 +315,99 @@
             filter: drop-shadow(0 0 30px rgba(74, 222, 128, 0.6));
         }
 
+        /* Mobile touch controls */
+        .mobile-controls {
+            display: none;
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+        }
+
+        .d-pad {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .d-pad-btn {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .d-pad-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.6);
+            background: linear-gradient(135deg, rgba(118, 75, 162, 0.9) 0%, rgba(102, 126, 234, 0.9) 100%);
+        }
+
+        .d-pad-btn.up {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .d-pad-btn.down {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .d-pad-btn.left {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .d-pad-btn.right {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .d-pad-btn.up:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+
+        .d-pad-btn.down:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+
+        .d-pad-btn.left:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        .d-pad-btn.right:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        .d-pad-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 2em;
@@ -331,6 +424,43 @@
 
             .level-up-text {
                 font-size: 2.5em;
+            }
+
+            .mobile-controls {
+                display: block;
+            }
+
+            .instructions {
+                font-size: 0.85em;
+            }
+
+            .score-board {
+                gap: 10px;
+            }
+
+            .score-item {
+                padding: 10px 15px;
+            }
+
+            .score-value {
+                font-size: 1.5em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 15px;
+            }
+
+            .controls {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .btn {
+                width: 100%;
+                margin: 0;
             }
         }
     </style>
@@ -369,14 +499,27 @@
             </div>
         </div>
 
+        <!-- Mobile D-Pad Controls -->
+        <div class="mobile-controls">
+            <div class="d-pad">
+                <div class="d-pad-btn up" id="btnUp">↑</div>
+                <div class="d-pad-btn down" id="btnDown">↓</div>
+                <div class="d-pad-btn left" id="btnLeft">←</div>
+                <div class="d-pad-btn right" id="btnRight">→</div>
+                <div class="d-pad-center"></div>
+            </div>
+        </div>
+
         <div class="controls">
             <button class="btn" id="startBtn" onclick="startGame()">Start Game</button>
             <button class="btn btn-secondary" onclick="pauseGame()">Pause</button>
         </div>
 
         <div class="instructions">
-            <p>Use arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd> <kbd>A</kbd>
-                <kbd>S</kbd> <kbd>D</kbd> to move</p>
+            <p><span class="mobile-only">Use on-screen controls or swipe to move!</span>
+                <span class="desktop-only">Use arrow keys <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or
+                    <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to move</span>
+            </p>
             <p>Eat the food to grow and increase your score! Reach 50 points to level up!</p>
             <p>Each level increases speed and adds obstacles!</p>
         </div>
@@ -432,6 +575,88 @@
         const obstacleGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
         obstacleGradient.addColorStop(0, '#ff6b6b');
         obstacleGradient.addColorStop(1, '#ee5a6f');
+
+        // Mobile touch controls
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        // Touch event handlers for swipe gestures
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (!isGameRunning) {
+                startGame();
+                return;
+            }
+
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            // Determine swipe direction
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                // Horizontal swipe
+                if (diffX > 30 && dx === 0) {
+                    dx = 1;
+                    dy = 0;
+                } else if (diffX < -30 && dx === 0) {
+                    dx = -1;
+                    dy = 0;
+                }
+            } else {
+                // Vertical swipe
+                if (diffY > 30 && dy === 0) {
+                    dx = 0;
+                    dy = 1;
+                } else if (diffY < -30 && dy === 0) {
+                    dx = 0;
+                    dy = -1;
+                }
+            }
+            e.preventDefault();
+        }, { passive: false });
+
+        // D-Pad button handlers
+        document.getElementById('btnUp').addEventListener('touchstart', (e) => {
+            if (isGameRunning && dy === 0) {
+                dx = 0;
+                dy = -1;
+            }
+            e.preventDefault();
+        });
+
+        document.getElementById('btnDown').addEventListener('touchstart', (e) => {
+            if (isGameRunning && dy === 0) {
+                dx = 0;
+                dy = 1;
+            }
+            e.preventDefault();
+        });
+
+        document.getElementById('btnLeft').addEventListener('touchstart', (e) => {
+            if (isGameRunning && dx === 0) {
+                dx = -1;
+                dy = 0;
+            }
+            e.preventDefault();
+        });
+
+        document.getElementById('btnRight').addEventListener('touchstart', (e) => {
+            if (isGameRunning && dx === 0) {
+                dx = 1;
+                dy = 0;
+            }
+            e.preventDefault();
+        });
 
         // Level system
         function checkLevelUp() {
@@ -764,4 +989,4 @@
     </script>
 </body>
 
-</html># snake_game
+</html>
